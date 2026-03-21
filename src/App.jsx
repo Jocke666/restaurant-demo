@@ -48,44 +48,39 @@ export default function App() {
     setInput("");
     setLoading(true);
 
-    try {
-      const response = await fetch(`${API_URL}/api/chat`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ message: value, language }),
-      });
+   try {
+  const response = await fetch(`${API_URL}/api/chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ message: input, language }),
+  });
 
-      if (!response.ok) {
-        throw new Error("Server error");
-      }
+  const data = await response.json();
 
-      const data = await response.json();
+  setMessages((prev) => {
+    const updated = [...prev];
+    updated[updated.length - 1] = {
+      role: "assistant",
+      text: data.reply,
+    };
+    return updated;
+  });
+} catch (error) {
+  setMessages((prev) => {
+    const updated = [...prev];
+    updated[updated.length - 1] = {
+      role: "assistant",
+      text:
+        language === "et"
+          ? "AI teenus on hetkel ajutiselt maas."
+          : "The AI service is temporarily unavailable.",
+    };
+    return updated;
+  });
 
-      setMessages((prev) => {
-        const updated = [...prev];
-        updated[updated.length - 1] = {
-          role: "assistant",
-          text:
-            data.reply ||
-            (language === "et"
-              ? "Vabandust, vastust ei tulnud."
-              : "Sorry, no reply was received."),
-        };
-        return updated;
-      });
-    } catch (error) {
-      setMessages((prev) => {
-        const updated = [...prev];
-        updated[updated.length - 1] = {
-          role: "assistant",
-          text:
-  language === "et"
-    ? "AI teenus on hetkel ajutiselt maas."
-    : "The AI service is temporarily unavailable.",
-        return updated;
-      });
+
     } finally {
       setLoading(false);
     }
