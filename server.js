@@ -10,33 +10,53 @@ const port = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
-app.get("/health", (req, res) => {
-  res.status(200).json({ ok: true });
-});
+
+if (!process.env.OPENAI_API_KEY) {
+  console.error("Missing OPENAI_API_KEY in environment variables.");
+  process.exit(1);
+}
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+app.get("/health", (req, res) => {
+  res.status(200).json({ ok: true });
+});
+
 app.post("/api/chat", async (req, res) => {
   try {
-    const { message, language } = req.body;
+    const { message, language = "et" } = req.body;
 
     if (!message || !message.trim()) {
       return res.status(400).json({ error: "Message is required." });
     }
 
-    const response = await client.responses.create({
-      model: "gpt-4.1-mini",
-      instructions: `
+    const lang = language === "en" ? "English" : "Estonian";
+
+    const instructions = `
 You are a helpful restaurant assistant for Vana Linna Pizza in Tallinn.
 
-Reply in ${language === "en" ? "English" : "Estonian"}.
+Restaurant details:
+- Address: Pikk 12, Tallinn
+- Opening hours:
+  Mon-Thu 11:00-21:00
+  Fri-Sat 11:00-22:00
+  Sun 12:00-20:00
+- Bookings: Guests should call the restaurant to make a booking.
+- Phone: +372 5555 5555
+
+Reply in ${lang}.
 Keep answers short, friendly, and useful.
 
+If the user asks about opening hours, address, or bookings, use the restaurant details above.
 If you are not sure about a fact, do not invent it.
 If the user asks about bookings or availability, suggest calling the restaurant.
-`.trim(),
+`.trim();
+
+    const response = await client.responses.create({
+      model: "gpt-4.1-mini",
+      instructions,
       input: message,
     });
 
@@ -54,5 +74,5 @@ If the user asks about bookings or availability, suggest calling the restaurant.
 });
 
 app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
+  console.log(`Server running on port ${port}`);
 });
