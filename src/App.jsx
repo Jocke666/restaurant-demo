@@ -55,7 +55,7 @@ export default function App() {
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ message: input, language }),
+    body: JSON.stringify({ message: value, language }),
   });
 
   const data = await response.json();
