@@ -1,321 +1,218 @@
-// fix deploy
-import React, { useState, useEffect, useRef } from "react";
+import { useState } from "react";
+
+const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:3001").replace(/\/$/, "");
 
 export default function App() {
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
-
-  const [language, setLanguage] = useState("et");
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      text:
-        language === "et"
-          ? "Tere! Olen restorani assistent. Küsi julgelt 🙂"
-          : "Hi! I'm the restaurant assistant. Feel free to ask 🙂",
+      content:
+        "Hi! I can help you choose beauty products, explain ingredients, pricing, shipping, and more. What are you looking for?",
     },
   ]);
+
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const messagesEndRef = useRef(null);
+  const sendMessage = async (customMessage) => {
+    const text = (customMessage ?? input).trim();
+    if (!text || loading) return;
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    const userMsg = { role: "user", content: text };
+    const newMessages = [...messages, userMsg];
 
-  useEffect(() => {
-    setMessages([
-      {
-        role: "assistant",
-        text:
-          language === "et"
-            ? "Tere! Olen restorani assistent. Küsi julgelt 🙂"
-            : "Hi! I'm the restaurant assistant. Feel free to ask 🙂",
-      },
-    ]);
-    setInput("");
-  }, [language]);
-
-  const sendMessage = async (text) => {
-    const value = (text ?? input).trim();
-    if (!value || loading) return;
-
-    setMessages((prev) => [
-      ...prev,
-      { role: "user", text: value },
-      { role: "assistant", text: "..." },
-    ]);
-
+    setMessages(newMessages);
     setInput("");
     setLoading(true);
 
-   try {
-  const response = await fetch(`${API_URL}/api/chat`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ message: value, language }),
-  });
+    try {
+      const res = await fetch(`${API_URL}/api/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: text,
+          history: newMessages.slice(-8),
+        }),
+      });
 
-  const data = await response.json();
+      const data = await res.json();
 
-  setMessages((prev) => {
-    const updated = [...prev];
-    updated[updated.length - 1] = {
-      role: "assistant",
-      text: data.reply,
-    };
-    return updated;
-  });
-} catch (error) {
-  setMessages((prev) => {
-    const updated = [...prev];
-    updated[updated.length - 1] = {
-      role: "assistant",
-      text:
-        language === "et"
-          ? "AI teenus on hetkel ajutiselt maas."
-          : "The AI service is temporarily unavailable.",
-    };
-    return updated;
-  });
+      if (!res.ok) throw new Error(data.error || "Error");
 
-
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: data.reply },
+      ]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          content: "Something went wrong. Please try again.",
+        },
+      ]);
     } finally {
       setLoading(false);
     }
   };
 
-  const quickQuestions =
-    language === "et"
-      ? [
-          "Kas te olete avatud?",
-          "Ma tahan broneerida",
-          "Kas teil on menüü?",
-        ]
-      : ["Are you open?", "I want to book", "Do you have a menu?"];
-
-  const title = "Vana Linna Pizza";
-
-  const subtitle =
-    language === "et"
-      ? "Hubane pitsa- ja pastakoht Tallinna kesklinnas"
-      : "Cozy pizza and pasta restaurant in central Tallinn";
-
-  const inputPlaceholder =
-    language === "et" ? "Kirjuta oma küsimus..." : "Type your question...";
-
-  const sendButtonText = loading ? "..." : language === "et" ? "Saada" : "Send";
-
-  const callButtonText = language === "et" ? "📞 Helista nüüd" : "📞 Call now";
+  const quickQuestions = [
+    "Which product is best for dry skin?",
+    "What is the price of the vitamin C serum?",
+    "Do you have anything for sensitive skin?",
+    "How long does shipping take?",
+    "Can I return opened products?",
+  ];
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "#f3f4f6",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px",
-        fontFamily: "Arial, sans-serif",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "760px",
-          background: "#ffffff",
-          borderRadius: "20px",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
-          padding: "32px",
-        }}
-      >
-        <div style={{ textAlign: "right", marginBottom: "16px" }}>
-          <button
-            onClick={() => setLanguage("et")}
-            disabled={loading}
-            style={{
-              padding: "8px 12px",
-              borderRadius: "10px",
-              border: "1px solid #d1d5db",
-              background: language === "et" ? "#111827" : "#f9fafb",
-              color: language === "et" ? "#ffffff" : "#111827",
-              cursor: loading ? "not-allowed" : "pointer",
-              marginRight: "8px",
-            }}
-          >
-            EST
-          </button>
+    <div style={styles.page}>
+      <div style={styles.container}>
+        <h1 style={styles.title}>Beauty AI Assistant</h1>
+        <p style={styles.subtitle}>
+          Helps customers choose products, answer questions, and reduce support
+        </p>
 
-          <button
-            onClick={() => setLanguage("en")}
-            disabled={loading}
-            style={{
-              padding: "8px 12px",
-              borderRadius: "10px",
-              border: "1px solid #d1d5db",
-              background: language === "en" ? "#111827" : "#f9fafb",
-              color: language === "en" ? "#ffffff" : "#111827",
-              cursor: loading ? "not-allowed" : "pointer",
-            }}
-          >
-            EN
-          </button>
-        </div>
-
-        <div style={{ textAlign: "center", marginBottom: "24px" }}>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: "48px",
-              lineHeight: 1.1,
-              color: "#111827",
-            }}
-          >
-            {title}
-          </h1>
-
-          <p
-            style={{
-              color: "#6b7280",
-              marginTop: "12px",
-              marginBottom: 0,
-              fontSize: "20px",
-            }}
-          >
-            {subtitle}
-          </p>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            gap: "10px",
-            justifyContent: "center",
-            flexWrap: "wrap",
-            marginBottom: "20px",
-          }}
-        >
-          {quickQuestions.map((q, i) => (
-            <button
+        <div style={styles.chat}>
+          {messages.map((msg, i) => (
+            <div
               key={i}
-              onClick={() => sendMessage(q)}
-              disabled={loading}
               style={{
-                padding: "10px 16px",
-                borderRadius: "999px",
-                border: "1px solid #d1d5db",
-                background: "#f9fafb",
-                cursor: loading ? "not-allowed" : "pointer",
-                fontSize: "14px",
-                opacity: loading ? 0.7 : 1,
+                ...styles.message,
+                ...(msg.role === "user"
+                  ? styles.user
+                  : styles.assistant),
               }}
+            >
+              {msg.content}
+            </div>
+          ))}
+
+          {loading && (
+            <div style={{ ...styles.message, ...styles.assistant }}>
+              Thinking...
+            </div>
+          )}
+        </div>
+
+        <div style={styles.quickRow}>
+          {quickQuestions.map((q) => (
+            <button
+              key={q}
+              style={styles.quickBtn}
+              onClick={() => sendMessage(q)}
             >
               {q}
             </button>
           ))}
         </div>
 
-        <div
-          style={{
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            padding: "20px",
-            height: "340px",
-            overflowY: "auto",
-            marginBottom: "16px",
-            background: "#f9fafb",
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            sendMessage();
           }}
-        >
-          {messages.map((m, i) => (
-            <div
-              key={i}
-              style={{
-                display: "flex",
-                justifyContent: m.role === "user" ? "flex-end" : "flex-start",
-                marginBottom: "10px",
-              }}
-            >
-              <div
-                style={{
-                  background: m.role === "user" ? "#111827" : "#e5e7eb",
-                  color: m.role === "user" ? "#ffffff" : "#111827",
-                  padding: "10px 14px",
-                  borderRadius: "12px",
-                  maxWidth: "75%",
-                  lineHeight: 1.4,
-                  wordBreak: "break-word",
-                }}
-              >
-                {m.text}
-              </div>
-            </div>
-          ))}
-
-          <div ref={messagesEndRef} />
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            gap: "10px",
-            alignItems: "center",
-          }}
+          style={styles.inputRow}
         >
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") sendMessage();
-            }}
-            placeholder={inputPlaceholder}
-            disabled={loading}
-            style={{
-              flex: 1,
-              padding: "12px 14px",
-              borderRadius: "10px",
-              border: "1px solid #d1d5db",
-              fontSize: "15px",
-            }}
+            placeholder="Ask about products, ingredients, pricing..."
+            style={styles.input}
           />
 
-          <button
-            onClick={() => sendMessage()}
-            disabled={loading}
-            style={{
-              padding: "12px 18px",
-              borderRadius: "10px",
-              background: "#111827",
-              color: "#ffffff",
-              border: "none",
-              cursor: loading ? "not-allowed" : "pointer",
-              fontWeight: "bold",
-              opacity: loading ? 0.7 : 1,
-            }}
-          >
-            {sendButtonText}
-          </button>
-        </div>
-
-        <div style={{ textAlign: "center", marginTop: "20px" }}>
-          <a
-            href="tel:+37255551234"
-            style={{
-              background: "#dc2626",
-              color: "#ffffff",
-              padding: "12px 18px",
-              borderRadius: "10px",
-              textDecoration: "none",
-              display: "inline-block",
-              fontWeight: "bold",
-            }}
-          >
-            {callButtonText}
-          </a>
-        </div>
+          <button style={styles.button}>Send</button>
+        </form>
       </div>
     </div>
   );
 }
+
+const styles = {
+  page: {
+    minHeight: "100vh",
+    background: "#f5f6fa",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+    fontFamily: "Inter, sans-serif",
+  },
+  container: {
+    width: "100%",
+    maxWidth: 700,
+    background: "white",
+    borderRadius: 16,
+    padding: 20,
+    boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
+  },
+  title: {
+    margin: 0,
+    fontSize: 28,
+  },
+  subtitle: {
+    marginTop: 6,
+    color: "#666",
+    marginBottom: 16,
+  },
+  chat: {
+    height: 400,
+    overflowY: "auto",
+    border: "1px solid #eee",
+    borderRadius: 12,
+    padding: 12,
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+    background: "#fafafa",
+  },
+  message: {
+    padding: "10px 12px",
+    borderRadius: 10,
+    maxWidth: "75%",
+    lineHeight: 1.4,
+  },
+  user: {
+    alignSelf: "flex-end",
+    background: "#111",
+    color: "white",
+  },
+  assistant: {
+    alignSelf: "flex-start",
+    background: "#eee",
+  },
+  quickRow: {
+    marginTop: 12,
+    display: "flex",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  quickBtn: {
+    padding: "8px 12px",
+    borderRadius: 999,
+    border: "1px solid #ddd",
+    background: "white",
+    cursor: "pointer",
+    fontSize: 12,
+  },
+  inputRow: {
+    display: "flex",
+    gap: 10,
+    marginTop: 12,
+  },
+  input: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 10,
+    border: "1px solid #ddd",
+  },
+  button: {
+    padding: "12px 16px",
+    borderRadius: 10,
+    border: "none",
+    background: "#111",
+    color: "white",
+    cursor: "pointer",
+  },
+};
