@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:3001").replace(/\/$/, "");
 
@@ -80,12 +81,14 @@ export default function App() {
               key={i}
               style={{
                 ...styles.message,
-                ...(msg.role === "user"
-                  ? styles.user
-                  : styles.assistant),
+                ...(msg.role === "user" ? styles.user : styles.assistant),
               }}
             >
-              {msg.content}
+              {msg.role === "assistant" ? (
+                <ReactMarkdown>{msg.content}</ReactMarkdown>
+              ) : (
+                msg.content
+              )}
             </div>
           ))}
 
@@ -102,6 +105,7 @@ export default function App() {
               key={q}
               style={styles.quickBtn}
               onClick={() => sendMessage(q)}
+              type="button"
             >
               {q}
             </button>
@@ -122,7 +126,9 @@ export default function App() {
             style={styles.input}
           />
 
-          <button style={styles.button}>Send</button>
+          <button style={styles.button} type="submit">
+            Send
+          </button>
         </form>
       </div>
     </div>
@@ -171,7 +177,8 @@ const styles = {
     padding: "10px 12px",
     borderRadius: 10,
     maxWidth: "75%",
-    lineHeight: 1.4,
+    lineHeight: 1.5,
+    whiteSpace: "pre-wrap",
   },
   user: {
     alignSelf: "flex-end",
@@ -181,6 +188,7 @@ const styles = {
   assistant: {
     alignSelf: "flex-start",
     background: "#eee",
+    color: "#222",
   },
   quickRow: {
     marginTop: 12,
