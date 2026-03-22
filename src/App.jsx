@@ -85,10 +85,19 @@ export default function App() {
               }}
             >
               {msg.role === "assistant" ? (
-                <ReactMarkdown>{msg.content}</ReactMarkdown>
-              ) : (
-                msg.content
-              )}
+  <ReactMarkdown
+    components={{
+      p: ({ children }) => <p style={{ margin: "6px 0" }}>{children}</p>,
+      li: ({ children }) => <li style={{ marginBottom: 6 }}>{children}</li>,
+      ol: ({ children }) => <ol style={{ paddingLeft: 20, margin: "8px 0" }}>{children}</ol>,
+      ul: ({ children }) => <ul style={{ paddingLeft: 20, margin: "8px 0" }}>{children}</ul>,
+    }}
+  >
+    {msg.content}
+  </ReactMarkdown>
+) : (
+  msg.content
+)}
             </div>
           ))}
 
@@ -173,13 +182,13 @@ const styles = {
     gap: 10,
     background: "#fafafa",
   },
-  message: {
-    padding: "10px 12px",
-    borderRadius: 10,
-    maxWidth: "75%",
-    lineHeight: 1.5,
-    whiteSpace: "pre-wrap",
-  },
+message: {
+  padding: "12px 14px",
+  borderRadius: 10,
+  maxWidth: "75%",
+  lineHeight: 1.6,
+  whiteSpace: "pre-wrap",
+},
   user: {
     alignSelf: "flex-end",
     background: "#111",
