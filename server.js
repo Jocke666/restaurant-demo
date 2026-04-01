@@ -19,284 +19,273 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-function getSystemPrompt() {
+/**
+ * Multi-client beauty business configs
+ * Replace demo data with real client data later.
+ */
+const businesses = {
+  demo: {
+    businessName: "Glow Beauty Studio",
+    assistantName: "Beauty Booking Assistant",
+    niche: "full-service beauty studio",
+    intro:
+      "hair, makeup, skincare, and beauty appointments",
+    location: {
+      address: "123 Madison Ave, New York, NY",
+      city: "New York",
+      parking: "Street parking nearby",
+    },
+    booking: {
+      link: "https://example.com/book",
+      availabilityNote:
+        "Live calendar access is not connected, so direct clients to the booking link for current availability.",
+    },
+    hours: "Mon-Sat 9:00-7:00",
+    services: {
+      hair: [
+        {
+          name: "Color",
+          price: "From $120",
+          duration: "2-3 hours",
+          description:
+            "Hair color services based on the desired look and hair goals.",
+        },
+        {
+          name: "Cut & Style",
+          price: "$65",
+          duration: "1 hour",
+          description:
+            "Haircut and styling for maintenance or a fresh new shape.",
+        },
+        {
+          name: "Extensions",
+          price: "Consultation required",
+          duration: "Varies",
+          description:
+            "Extension services with consultation for matching and installation.",
+        },
+        {
+          name: "Treatments",
+          price: "From $45",
+          duration: "45 minutes",
+          description:
+            "Hair treatments designed to improve moisture, strength, or shine.",
+        },
+      ],
+      makeup: [
+        {
+          name: "Soft Glam",
+          price: "$95",
+          duration: "1 hour",
+          description: "A polished, natural-glam makeup look.",
+        },
+        {
+          name: "Full Glam",
+          price: "$130",
+          duration: "1.5 hours",
+          description: "A more defined, dramatic glam makeup look.",
+        },
+        {
+          name: "Bridal Makeup",
+          price: "From $180",
+          duration: "Varies",
+          description: "Bridal makeup for wedding day and related events.",
+        },
+        {
+          name: "Event Makeup",
+          price: "$110",
+          duration: "1 hour",
+          description: "Makeup for special occasions and events.",
+        },
+      ],
+      skincare: [
+        {
+          name: "Facial",
+          price: "$85",
+          duration: "1 hour",
+          description: "A skincare facial focused on cleansing and glow.",
+        },
+        {
+          name: "Advanced Treatment",
+          price: "From $120",
+          duration: "75 minutes",
+          description:
+            "Targeted skin treatments depending on concerns and goals.",
+        },
+        {
+          name: "Consultation",
+          price: "$30",
+          duration: "30 minutes",
+          description:
+            "A consultation to understand skin goals and recommend the best service.",
+        },
+      ],
+    },
+    policies: {
+      deposit: "A deposit may be required for selected appointments.",
+      cancellation: "24 hours notice is required for cancellations.",
+      late: "Clients more than 15 minutes late may need to reschedule.",
+      noShow: "Deposits are non-refundable for no-shows.",
+      refund: "Service refunds are handled case by case.",
+    },
+    leadCaptureFields: [
+      "name",
+      "best contact info",
+      "service interested in",
+      "preferred day or time",
+    ],
+  },
+
+  // Example of how future clients can be added
+  second-demo: {
+    businessName: "Luxe Skin Bar",
+    assistantName: "Skin & Beauty Assistant",
+    niche: "skin and beauty studio",
+    intro: "facials, treatments, makeup, and beauty services",
+    location: {
+      address: "45 Atlantic Ave, Brooklyn, NY",
+      city: "Brooklyn",
+      parking: "Paid parking nearby",
+    },
+    booking: {
+      link: "https://example.com/luxe-book",
+      availabilityNote:
+        "Availability should be checked through the booking link.",
+    },
+    hours: "Tue-Sun 10:00-6:00",
+    services: {
+      hair: [],
+      makeup: [
+        {
+          name: "Soft Glam",
+          price: "$100",
+          duration: "1 hour",
+          description: "Soft glam makeup for events and occasions.",
+        },
+      ],
+      skincare: [
+        {
+          name: "Signature Facial",
+          price: "$95",
+          duration: "60 minutes",
+          description: "A custom facial for hydration and glow.",
+        },
+        {
+          name: "Acne Consultation",
+          price: "$40",
+          duration: "30 minutes",
+          description: "Consultation to discuss skin concerns and treatment options.",
+        },
+      ],
+    },
+    policies: {
+      deposit: "Deposit required for all first-time bookings.",
+      cancellation: "24 hours notice required.",
+      late: "Late arrivals may shorten the service time.",
+      noShow: "No-show deposits are forfeited.",
+      refund: "No refunds on completed services.",
+    },
+    leadCaptureFields: [
+      "name",
+      "phone or email",
+      "service interested in",
+      "preferred day or time",
+    ],
+  },
+};
+
+function getBusiness(clientId) {
+  return businesses[clientId] || businesses.demo;
+}
+
+function buildBusinessContext(business) {
+  return JSON.stringify(business, null, 2);
+}
+
+function getSystemPrompt(business) {
   return `
-You are an AI assistant for a Shopify beauty store.
+You are ${business.assistantName} for ${business.businessName}, a ${business.niche}.
 
-Your goals:
-- answer customer questions clearly
-- help customers choose the right beauty products
-- explain product benefits, usage, ingredients, prices, and differences
-- answer store policy questions using only the provided policy data
-- reduce support workload
-- increase conversions in a helpful, non-pushy way
+Your job:
+- answer beauty service questions clearly
+- sound natural, short, and human
+- guide clients toward booking
+- collect lead details when they are not ready to book
 
-You can help with:
-- product recommendations
-- prices
-- ingredients
-- how to use products
-- skin type compatibility
-- hair type compatibility
-- product comparisons
-- bundles and offers
-- shipping
-- returns
-- support contact questions
-- general store questions
+Primary goal:
+Every reply should do these two things:
+1. answer the user's question
+2. move them to the next step:
+   - booking
+   - choosing the right service
+   - or leaving their details for follow-up
 
-Behavior rules:
-- keep answers clear, friendly, and concise
-- do NOT invent product details such as price, ingredients, stock, reviews, shipping times, or policies
-- only use catalog and policy information that is explicitly provided
-- if information is missing, say that clearly
-- avoid medical claims or diagnosing conditions
-- for sensitive skin or allergy concerns, suggest patch testing and checking the ingredient list
-- when recommending products, base the recommendation on the customer's stated needs
-- when helpful, ask 1 short follow-up question
-- when comparing products, explain who each product is best for
-- if the customer asks about a specific product, answer directly first and then guide further if useful
-- if the catalog or policy data does not contain the answer, say that live store data is not connected yet and provide only general guidance
+Rules:
+- do not make up information
+- only use the business info provided
+- if a detail is missing, say that clearly and offer to collect lead info
+- keep replies concise
+- do not over-explain
+- do not sound robotic
+- do not sound overly salesy
+
+Behavior:
+- if the user asks about a service, answer directly and then offer the booking link or help choosing
+- if the user asks about pricing, give the known price and invite booking
+- if the user asks about location, answer simply and then guide to booking
+- if the user asks about policies, answer briefly and then offer the next step
+- if the user asks about availability, explain that live availability should be checked through the booking link unless direct booking access exists
+- if the user is unsure what to choose, help narrow it down based on the result they want
+- if the user is interested but not ready, collect lead details
+
+Lead capture:
+When useful, ask for:
+- ${business.leadCaptureFields.join("\n- ")}
+
+Unknown info response style:
+- "I’m not fully sure on that, but I can take your details and have the studio confirm."
+- "I can help with that, or I can take your details and have someone follow up."
 
 Tone:
-- helpful
-- trustworthy
-- beauty-focused
-- not pushy
+- friendly
+- professional
+- concise
+- warm
+
+Important:
+Never end with a dead-end answer.
+Always end by guiding them toward booking or lead capture.
+
+Business data:
+${buildBusinessContext(business)}
 `;
 }
 
-function getMockProducts() {
-  return [
-    {
-      id: "prod_1",
-      title: "Hydrating Hyaluronic Serum",
-      price: "29.00",
-      currency: "EUR",
-      category: "serum",
-      skinType: ["dry", "normal", "sensitive"],
-      hairType: [],
-      concerns: ["dehydration", "dryness", "dullness"],
-      ingredients: ["Hyaluronic Acid", "Panthenol", "Glycerin"],
-      description:
-        "A lightweight hydrating serum designed to replenish moisture and support the skin barrier.",
-      howToUse:
-        "Apply 2-3 drops to clean skin before moisturizer, morning and evening.",
-      tags: ["hydrating", "fragrance-free", "sensitive-skin-friendly"],
-      inStock: true,
-      productUrl: "/products/hydrating-hyaluronic-serum",
-    },
-    {
-      id: "prod_2",
-      title: "Vitamin C Glow Serum",
-      price: "34.00",
-      currency: "EUR",
-      category: "serum",
-      skinType: ["normal", "combination", "oily"],
-      hairType: [],
-      concerns: ["dullness", "uneven tone", "lack of radiance"],
-      ingredients: ["Vitamin C", "Ferulic Acid", "Aloe Vera"],
-      description:
-        "A brightening serum that helps improve the look of uneven tone and boost radiance.",
-      howToUse:
-        "Apply in the morning after cleansing, followed by moisturizer and SPF.",
-      tags: ["brightening", "glow", "antioxidant"],
-      inStock: true,
-      productUrl: "/products/vitamin-c-glow-serum",
-    },
-    {
-      id: "prod_3",
-      title: "Barrier Repair Moisturizer",
-      price: "24.00",
-      currency: "EUR",
-      category: "moisturizer",
-      skinType: ["dry", "sensitive"],
-      hairType: [],
-      concerns: ["dryness", "barrier support", "redness"],
-      ingredients: ["Ceramides", "Squalane", "Shea Butter"],
-      description:
-        "A rich moisturizer designed to support the skin barrier and reduce dryness.",
-      howToUse:
-        "Apply after serum as the final step in your skincare routine.",
-      tags: ["barrier-care", "nourishing", "sensitive-skin-friendly"],
-      inStock: true,
-      productUrl: "/products/barrier-repair-moisturizer",
-    },
-    {
-      id: "prod_4",
-      title: "Clarifying Gel Cleanser",
-      price: "19.00",
-      currency: "EUR",
-      category: "cleanser",
-      skinType: ["oily", "combination"],
-      hairType: [],
-      concerns: ["oiliness", "clogged pores", "breakouts"],
-      ingredients: ["Niacinamide", "Green Tea Extract", "Glycerin"],
-      description:
-        "A fresh gel cleanser that helps remove excess oil and impurities without stripping the skin.",
-      howToUse:
-        "Massage onto damp skin, rinse with lukewarm water, and follow with serum or moisturizer.",
-      tags: ["clarifying", "lightweight", "daily-cleanser"],
-      inStock: true,
-      productUrl: "/products/clarifying-gel-cleanser",
-    },
-    {
-      id: "prod_5",
-      title: "Nourishing Repair Hair Mask",
-      price: "27.00",
-      currency: "EUR",
-      category: "hair-mask",
-      skinType: [],
-      hairType: ["dry", "damaged", "color-treated"],
-      concerns: ["damage", "frizz", "dry ends"],
-      ingredients: ["Argan Oil", "Keratin", "Shea Butter"],
-      description:
-        "A deeply nourishing hair mask formulated to soften, smooth, and strengthen dry or damaged hair.",
-      howToUse:
-        "Apply to clean, damp hair from mid-lengths to ends. Leave on for 5-10 minutes, then rinse thoroughly.",
-      tags: ["repair", "nourishing", "frizz-control"],
-      inStock: true,
-      productUrl: "/products/nourishing-repair-hair-mask",
-    },
-    {
-      id: "prod_6",
-      title: "Soothing Scalp Treatment",
-      price: "31.00",
-      currency: "EUR",
-      category: "scalp-treatment",
-      skinType: [],
-      hairType: ["sensitive-scalp", "normal", "dry"],
-      concerns: ["itchiness", "dry scalp", "sensitivity"],
-      ingredients: ["Panthenol", "Allantoin", "Oat Extract"],
-      description:
-        "A calming scalp treatment designed to comfort dry or sensitive scalps and support scalp balance.",
-      howToUse:
-        "Apply directly to the scalp after washing or as needed. Do not rinse.",
-      tags: ["scalp-care", "soothing", "sensitive"],
-      inStock: false,
-      productUrl: "/products/soothing-scalp-treatment",
-    },
+function detectLeadCaptureIntent(message) {
+  const text = message.toLowerCase();
+
+  const triggers = [
+    "not ready",
+    "maybe later",
+    "someone contact me",
+    "can someone contact me",
+    "follow up",
+    "follow-up",
+    "i'm not sure",
+    "im not sure",
+    "help me decide",
+    "need help deciding",
+    "not sure what to book",
+    "not sure what i need",
   ];
+
+  return triggers.some((phrase) => text.includes(phrase));
 }
 
-function getMockStorePolicies() {
-  return {
-    storeName: "Glow Theory Beauty",
-    currency: "EUR",
-    shipping: {
-      regions: ["Estonia", "Latvia", "Lithuania", "Finland"],
-      standardDelivery: "2-5 business days",
-      expressDelivery: "1-2 business days",
-      freeShippingThreshold: "50.00 EUR",
-      standardShippingCost: "4.90 EUR",
-      expressShippingCost: "9.90 EUR",
-      internationalShipping: false,
-    },
-    returns: {
-      returnWindowDays: 14,
-      openedBeautyProductsReturnable: false,
-      unopenedBeautyProductsReturnable: true,
-      returnCondition:
-        "Products must be unused, unopened, and in original packaging.",
-      refundProcessingTime:
-        "5-7 business days after the return is received and approved.",
-    },
-    support: {
-      email: "support@glowtheorybeauty.com",
-      responseTime: "within 24 business hours",
-      businessHours: "Monday to Friday, 9:00-17:00",
-    },
-    faq: {
-      veganProducts:
-        "Some products are vegan, but not all. Check individual product details.",
-      crueltyFree: "All products in the current demo catalog are cruelty-free.",
-      fragranceFree:
-        "Not every product is fragrance-free. Customers should check the individual product information.",
-    },
-  };
-}
-
-async function getStoreProducts() {
-  return getMockProducts();
-}
-
-async function getStorePolicies() {
-  return getMockStorePolicies();
-}
-
-function buildCatalogContext(products) {
-  return JSON.stringify(products, null, 2);
-}
-
-function buildPolicyContext(policies) {
-  return JSON.stringify(policies, null, 2);
-}
-
-function findRelevantProducts(products, userMessage) {
-  const query = userMessage.toLowerCase();
-
-  const scoredProducts = products.map((product) => {
-    let score = 0;
-
-    const fields = [
-      product.title,
-      product.category,
-      product.description,
-      ...(product.skinType || []),
-      ...(product.hairType || []),
-      ...(product.concerns || []),
-      ...(product.ingredients || []),
-      ...(product.tags || []),
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-
-    if (product.title?.toLowerCase().includes(query)) score += 10;
-    if (product.category?.toLowerCase().includes(query)) score += 5;
-
-    const queryWords = query.split(/\s+/).filter(Boolean);
-
-    for (const word of queryWords) {
-      if (word.length < 2) continue;
-      if (fields.includes(word)) score += 2;
-    }
-
-    if (query.includes("dry") && product.skinType?.includes("dry")) score += 4;
-    if (query.includes("sensitive") && product.skinType?.includes("sensitive")) score += 4;
-    if (query.includes("oily") && product.skinType?.includes("oily")) score += 4;
-    if (query.includes("combination") && product.skinType?.includes("combination")) score += 4;
-    if (query.includes("damaged") && product.hairType?.includes("damaged")) score += 4;
-    if (query.includes("dry scalp") && product.concerns?.includes("dry scalp")) score += 4;
-    if (query.includes("frizz") && product.concerns?.includes("frizz")) score += 4;
-    if (query.includes("dull") && product.concerns?.some((c) => c.toLowerCase().includes("dull"))) score += 4;
-    if (
-      query.includes("vitamin c") &&
-      product.ingredients?.some((i) => i.toLowerCase().includes("vitamin c"))
-    ) {
-      score += 6;
-    }
-    if (
-      query.includes("hyaluronic") &&
-      product.ingredients?.some((i) => i.toLowerCase().includes("hyaluronic"))
-    ) {
-      score += 6;
-    }
-    if (
-      query.includes("ceramide") &&
-      product.ingredients?.some((i) => i.toLowerCase().includes("ceramide"))
-    ) {
-      score += 6;
-    }
-
-    return { product, score };
-  });
-
-  return scoredProducts
-    .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 4)
-    .map((item) => item.product);
+function getLeadCaptureNudge(business) {
+  return `If they are not ready to book, offer to collect their ${business.leadCaptureFields.join(
+    ", "
+  )}.`;
 }
 
 app.get("/api/health", (_req, res) => {
@@ -305,26 +294,26 @@ app.get("/api/health", (_req, res) => {
 
 app.post("/api/chat", async (req, res) => {
   try {
-    const { message, history = [] } = req.body || {};
+    const { message, history = [], clientId = "demo" } = req.body || {};
 
     if (!message || typeof message !== "string") {
       return res.status(400).json({ error: "Message is required." });
     }
 
-    const products = await getStoreProducts();
-    const policies = await getStorePolicies();
-
-    const relevantProducts = findRelevantProducts(products, message);
-    const productsForPrompt = relevantProducts.length > 0 ? relevantProducts : products;
+    const business = getBusiness(clientId);
+    const leadCaptureIntent = detectLeadCaptureIntent(message);
 
     const systemPrompt = `
-${getSystemPrompt()}
+${getSystemPrompt(business)}
 
-Relevant store products:
-${buildCatalogContext(productsForPrompt)}
-
-Store policies and business info:
-${buildPolicyContext(policies)}
+Extra guidance for this turn:
+${
+  leadCaptureIntent
+    ? `The user appears hesitant or undecided. Prioritize lead capture. Ask for ${business.leadCaptureFields.join(
+        ", "
+      )}.`
+    : getLeadCaptureNudge(business)
+}
 `;
 
     const safeHistory = Array.isArray(history)
@@ -335,12 +324,12 @@ ${buildPolicyContext(policies)}
               typeof m.content === "string" &&
               ["user", "assistant"].includes(m.role)
           )
-          .slice(-8)
+          .slice(-10)
       : [];
 
     const completion = await client.chat.completions.create({
       model: process.env.OPENAI_MODEL || "gpt-4o-mini",
-      temperature: 0.4,
+      temperature: 0.5,
       messages: [
         { role: "system", content: systemPrompt },
         ...safeHistory,
@@ -354,7 +343,11 @@ ${buildPolicyContext(policies)}
       return res.status(500).json({ error: "Empty response from AI." });
     }
 
-    return res.json({ reply });
+    return res.json({
+      reply,
+      clientId,
+      businessName: business.businessName,
+    });
   } catch (error) {
     console.error("Chat API error:", error);
 

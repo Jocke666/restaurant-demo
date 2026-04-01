@@ -2,13 +2,14 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:3001").replace(/\/$/, "");
+const CLIENT_ID = import.meta.env.VITE_CLIENT_ID || "demo";
 
 export default function App() {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
       content:
-        "Hi! I can help you choose beauty products, explain ingredients, pricing, shipping, and more. What are you looking for?",
+        "Hi! I can help with services, pricing, policies, and booking. What kind of beauty service are you looking for?",
     },
   ]);
 
@@ -33,8 +34,9 @@ export default function App() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          clientId: CLIENT_ID,
           message: text,
-          history: newMessages.slice(-8),
+          history: newMessages.slice(-10),
         }),
       });
 
@@ -60,19 +62,20 @@ export default function App() {
   };
 
   const quickQuestions = [
-    "Which product is best for dry skin?",
-    "What is the price of the vitamin C serum?",
-    "Do you have anything for sensitive skin?",
-    "How long does shipping take?",
-    "Can I return opened products?",
+    "What services do you offer?",
+    "How much is a facial?",
+    "Do you do makeup for events?",
+    "I need help choosing a service",
+    "How do I book an appointment?",
+    "What is your cancellation policy?",
   ];
 
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <h1 style={styles.title}>Beauty AI Assistant</h1>
+        <h1 style={styles.title}>Beauty Booking Assistant</h1>
         <p style={styles.subtitle}>
-          Helps customers choose products, answer questions, and reduce support
+          Answers beauty service questions and helps clients book
         </p>
 
         <div style={styles.chat}>
@@ -143,11 +146,11 @@ export default function App() {
           <input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about products, ingredients, pricing..."
+            placeholder="Ask about services, pricing, location, booking, or policies..."
             style={styles.input}
           />
 
-          <button style={styles.button} type="submit">
+          <button style={styles.button} type="submit" disabled={loading}>
             Send
           </button>
         </form>
@@ -168,7 +171,7 @@ const styles = {
   },
   container: {
     width: "100%",
-    maxWidth: 700,
+    maxWidth: 720,
     background: "white",
     borderRadius: 16,
     padding: 20,
@@ -184,7 +187,7 @@ const styles = {
     marginBottom: 16,
   },
   chat: {
-    height: 400,
+    height: 420,
     overflowY: "auto",
     border: "1px solid #eee",
     borderRadius: 12,
