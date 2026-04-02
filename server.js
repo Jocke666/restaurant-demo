@@ -358,3 +358,8 @@ ${
       error: "Server error while generating AI response.",
     });
   }
+});
+
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
