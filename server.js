@@ -19,17 +19,12 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-/**
- * Multi-client beauty business configs
- * Replace demo data with real client data later.
- */
 const businesses = {
   demo: {
     businessName: "Glow Beauty Studio",
     assistantName: "Beauty Booking Assistant",
     niche: "full-service beauty studio",
-    intro:
-      "hair, makeup, skincare, and beauty appointments",
+    intro: "hair, makeup, skincare, and beauty appointments",
     location: {
       address: "123 Madison Ave, New York, NY",
       city: "New York",
@@ -77,7 +72,7 @@ const businesses = {
           name: "Soft Glam",
           price: "$95",
           duration: "1 hour",
-          description: "A polished, natural-glam makeup look.",
+          description: "A polished, natural glam makeup look.",
         },
         {
           name: "Full Glam",
@@ -136,10 +131,9 @@ const businesses = {
     ],
   },
 
-  // Example of how future clients can be added
-  second-demo: {
+  secondDemo: {
     businessName: "Luxe Skin Bar",
-    assistantName: "Skin & Beauty Assistant",
+    assistantName: "Skin and Beauty Assistant",
     niche: "skin and beauty studio",
     intro: "facials, treatments, makeup, and beauty services",
     location: {
@@ -174,7 +168,8 @@ const businesses = {
           name: "Acne Consultation",
           price: "$40",
           duration: "30 minutes",
-          description: "Consultation to discuss skin concerns and treatment options.",
+          description:
+            "Consultation to discuss skin concerns and treatment options.",
         },
       ],
     },
@@ -243,7 +238,7 @@ When useful, ask for:
 - ${business.leadCaptureFields.join("\n- ")}
 
 Unknown info response style:
-- "I’m not fully sure on that, but I can take your details and have the studio confirm."
+- "I'm not fully sure on that, but I can take your details and have the studio confirm."
 - "I can help with that, or I can take your details and have someone follow up."
 
 Tone:
@@ -283,9 +278,7 @@ function detectLeadCaptureIntent(message) {
 }
 
 function getLeadCaptureNudge(business) {
-  return `If they are not ready to book, offer to collect their ${business.leadCaptureFields.join(
-    ", "
-  )}.`;
+  return `If they are not ready to book, offer to collect their ${business.leadCaptureFields.join(", ")}.`;
 }
 
 app.get("/api/health", (_req, res) => {
@@ -309,9 +302,7 @@ ${getSystemPrompt(business)}
 Extra guidance for this turn:
 ${
   leadCaptureIntent
-    ? `The user appears hesitant or undecided. Prioritize lead capture. Ask for ${business.leadCaptureFields.join(
-        ", "
-      )}.`
+    ? `The user appears hesitant or undecided. Prioritize lead capture. Ask for ${business.leadCaptureFields.join(", ")}.`
     : getLeadCaptureNudge(business)
 }
 `;
@@ -367,8 +358,3 @@ ${
       error: "Server error while generating AI response.",
     });
   }
-});
-
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
